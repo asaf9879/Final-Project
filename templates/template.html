@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Math Calculator</title>
+</head>
+<body>
+    <h1>Math Calculator</h1>
+    <form method="GET" action="/">
+        <label for="expression">Enter Expression:</label>
+        <input type="text" name="expression" id="expression" required>
+        <button type="submit">Calculate</button>
+    </form>
+
+    {% if result is not none %}
+        <h2>Result: {{ result }}</h2>
+    {% endif %}
+
+    {% if error is not none %}
+        <h2 style="color: red;">Error: {{ error }}</h2>
+    {% endif %}
+</body>
+</html>

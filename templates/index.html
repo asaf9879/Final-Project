@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TODO List</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f9;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            width: 400px;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+
+        form {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            font-size: 16px;
+            border: 2px solid #ddd;
+            border-radius: 4px;
+            outline: none;
+            margin-bottom: 10px;
+        }
+
+        input[type="text"]:focus {
+            border-color: #4CAF50;
+        }
+
+        select, input[type="date"] {
+            width: 48%;
+            padding: 12px;
+            font-size: 16px;
+            border: 2px solid #ddd;
+            border-radius: 4px;
+            outline: none;
+            margin-bottom: 10px;
+        }
+
+        button {
+            padding: 12px;
+            background-color: #4CAF50;
+            border: none;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+            border-radius: 4px;
+            width: 100%;
+            text-align: center;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        .task-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .task-item {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            justify-content: space-between;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+        }
+
+        .task-item.done {
+            background-color: #e0ffe0;
+            text-decoration: line-through;
+        }
+
+        .task-actions {
+            display: flex;
+            width: 100%;
+            justify-content: space-between;
+            margin-top: 10px;
+        }
+
+        .task-actions button {
+            font-weight: 600;
+            padding: 12px;
+            font-size: 16px;
+            background-color: #f44336;
+            border: none;
+            color: white;
+            cursor: pointer;
+            border-radius: 4px;
+            text-align: center;
+        }
+
+        .task-actions button:hover {
+            background-color: #e53935;
+        }
+
+        .task-actions .done-button {
+            background-color: #4CAF50;
+        }
+
+        .task-actions .done-button:hover {
+            background-color: #45a049;
+        }
+
+        .priority-label {
+            font-weight: bold;
+            margin-right: 10px;
+        }
+
+        .priority-low {
+            background-color: #d3f8e2;
+        }
+
+        .priority-medium {
+            background-color: #fff3cd;
+        }
+
+        .priority-high {
+            background-color: #f8d7da;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>TODO List</h1>
+
+        <!-- Form to add a new task -->
+        <form action="{{ url_for('add_task') }}" method="POST">
+            <input type="text" name="task_name" placeholder="Enter new task" required>
+            
+            <select name="priority" required>
+                <option value="">Select Priority</option>
+                <option value="low">Low</option>
+                <option value="medium">Medium</option>
+                <option value="high">High</option>
+            </select>
+
+            <input type="date" name="deadline">
+
+            <button type="submit">Add Task</button>
+        </form>
+
+        <!-- Task List -->
+        <ul class="task-list">
+            <!-- Dynamically rendered tasks -->
+            {% for task in tasks %}
+                <li class="task-item {% if task.done %}done{% endif %} {% if task.priority == 'low' %}priority-low{% elif task.priority == 'medium' %}priority-medium{% elif task.priority == 'high' %}priority-high{% endif %}">
+                    <span>{{ task.name }}</span>
+                    <div>
+                        <strong>Priority:</strong> {{ task.priority | capitalize }} 
+                        {% if task.deadline %}
+                            <br><strong>Deadline:</strong> {{ task.deadline }}
+                        {% endif %}
+                    </div>
+                    <div class="task-actions">
+                        <form action="{{ url_for('mark_done', task_index=loop.index0) }}" method="POST" style="display:inline;">
+                            <button type="submit" class="done-button">Mark as Done</button>
+                        </form>
+                        <form action="{{ url_for('delete_task', task_index=loop.index0) }}" method="POST" style="display:inline;">
+                            <button type="submit">Delete</button>
+                        </form>
+                    </div>
+                </li>
+            {% endfor %}
+        </ul>
+
+    </div>
+
+</body>
+</html>
