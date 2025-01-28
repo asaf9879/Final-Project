@@ -157,7 +157,7 @@
 
         <!-- Form to add a new task -->
         <form action="{{ url_for('add_task') }}" method="POST">
-            <input type="text" name="task_name" placeholder="Enter new task" required>
+            <input type="text" name="task" placeholder="Enter new task" required>  <!-- Changed 'task_name' to 'task' -->
             
             <select name="priority" required>
                 <option value="">Select Priority</option>
@@ -167,7 +167,7 @@
             </select>
 
             <input type="date" name="deadline">
-
+            
             <button type="submit">Add Task</button>
         </form>
 
@@ -175,19 +175,19 @@
         <ul class="task-list">
             <!-- Dynamically rendered tasks -->
             {% for task in tasks %}
-                <li class="task-item {% if task.done %}done{% endif %} {% if task.priority == 'low' %}priority-low{% elif task.priority == 'medium' %}priority-medium{% elif task.priority == 'high' %}priority-high{% endif %}">
-                    <span>{{ task.name }}</span>
+                <li class="task-item {% if task.completed %}done{% endif %} {% if task.priority == 'low' %}priority-low{% elif task.priority == 'medium' %}priority-medium{% elif task.priority == 'high' %}priority-high{% endif %}">
+                    <span>{{ task.task }}</span>
                     <div>
                         <strong>Priority:</strong> {{ task.priority | capitalize }} 
                         {% if task.deadline %}
-                            <br><strong>Deadline:</strong> {{ task.deadline }}
+                            <br><strong>Deadline:</strong> {{ task.deadline.strftime('%Y-%m-%d') }}
                         {% endif %}
                     </div>
                     <div class="task-actions">
-                        <form action="{{ url_for('mark_done', task_index=loop.index0) }}" method="POST" style="display:inline;">
+                        <form action="{{ url_for('mark_done', task_id=task.task_id) }}" method="POST" style="display:inline;">
                             <button type="submit" class="done-button">Mark as Done</button>
                         </form>
-                        <form action="{{ url_for('delete_task', task_index=loop.index0) }}" method="POST" style="display:inline;">
+                        <form action="{{ url_for('delete_task', task_id=task.task_id) }}" method="POST" style="display:inline;">
                             <button type="submit">Delete</button>
                         </form>
                     </div>
