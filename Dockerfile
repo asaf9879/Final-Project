@@ -1,25 +1,22 @@
-FROM python:3.12-slim
+FROM python:3.9-slim
 
-# Set the working directory in the container
+ENV DB_HOST=localhost
+ENV DB_USER=root
+ENV DB_PASSWORD=password
+ENV DB_NAME=todo_list
+
 WORKDIR /app
 
-# Copy the requirements file into the container
-COPY requirements.txt .
+COPY requirements.txt /app/
 
-# Install the dependencies
-RUN pip install -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
 
+COPY . /app/
 
-# Copy the entire app directory into the container
-COPY . .
+ENV FLASK_APP=app_project.py
+ENV PYTHONUNBUFFERED=1
 
-# Set environment variables
-ENV FLASK_APP=app.py
-
-
-# Expose the Flask port
 EXPOSE 5000
 
-# Run the app when the container starts
-CMD ["flask", "run", "--host=0.0.0.0"]
+CMD ["gunicorn", "--bind", "0.0.0.0:5000", "app_project:todo_list_app"]
 
