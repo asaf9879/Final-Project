@@ -1,30 +1,72 @@
-version: '3.8'
-services:
-  app:
-    build: .
-    environment:
-      - FLASK_APP=app.py
-      
-    ports:
-      - "5000:5000"
-    volumes:
-      - ./app:/app
-    depends_on:
-      - mysql-db
-    command: flask run --host=0.0.0.0
 
-  mysql-db:
-    image: mysql:5.7
+services:
+  app_1:
+    image: asafd/to_do_list
+    environment:
+      FLASK_APP: app.py
+      FLASK_ENV: production
+      DB_HOST: db
+      DB_USER: python_todo_list_app
+      DB_PASSWORD: 123password
+      DB_NAME: todo_list_app_db
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+    - front
+    - back
+
+  app_2:
+    image: asafd/to_do_list
+    environment:
+      FLASK_APP: app.py
+      FLASK_ENV: production
+      DB_HOST: db
+      DB_USER: python_todo_list_app
+      DB_PASSWORD: 123password
+      DB_NAME: todo_list_app_db
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+    - front
+    - back
+
+  db:
+    image: mysql:8.0
     environment:
       MYSQL_ROOT_PASSWORD: rootpassword
-      MYSQL_DATABASE: tasksdb
-      MYSQL_USER: asaf
-      MYSQL_PASSWORD: 1234
-    ports:
-      - "3306:3306"
+      MYSQL_DATABASE: todo_list_app_db
+      MYSQL_USER: python_todo_list_app
+      MYSQL_PASSWORD: 123password
     volumes:
-      - mysql_data:/var/lib/mysql
+    -  sql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      retries: 5
+      timeout: 5s
+    networks:
+    - back
+
+  nginx:
+    image: nginx:latest
+    ports:
+    -  "80:80"
+    volumes:
+    -  ./nginx/default.conf:/etc/nginx/templates/default.conf.template
+    depends_on:
+    -  app_1
+    -  app_2
+    environment:
+      APP_1_HOST: app_1
+      APP_2_HOST: app_2
+    networks:
+    - front
 
 volumes:
-  mysql_data:
+  sql_data:
 
+networks:
+  back:
+  front:
