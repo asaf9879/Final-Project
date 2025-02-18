@@ -46,13 +46,14 @@
         .orange { background-color: #fff2cc; }
         .green { background-color: #ccffcc; }
         .white { background-color: white; }
-        p {text-align: center;}
+        p { text-align: center; }
     </style>
 </head>
 <body>
     <h1>Todo List</h1>
 
-    <form method="POST" class="task-form">
+    <!-- Fix: Specify the correct action for adding a task -->
+    <form action="{{ url_for('add_task') }}" method="POST" class="task-form">
         <input type="text" name="task" placeholder="Enter new task" required>
         <input type="date" name="deadline">
         <input type="submit" value="Add">
@@ -72,11 +73,14 @@
                         {% endif %}
                     </div>
                     <div class="task-actions">
-                        <form method="POST" style="display: inline;">
+                        <!-- Fix: Specify the correct action for completing a task -->
+                        <form action="{{ url_for('complete_task') }}" method="POST">
                             <input type="hidden" name="complete" value="{{ task.id }}">
                             <input type="submit" value="✓" title="Mark as done/undone">
                         </form>
-                        <form method="POST" style="display: inline;">
+
+                        <!-- Fix: Specify the correct action for deleting a task -->
+                        <form action="{{ url_for('delete_task') }}" method="POST">
                             <input type="hidden" name="delete" value="{{ task.id }}">
                             <input type="submit" value="Delete">
                         </form>
