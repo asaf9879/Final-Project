@@ -1,107 +1,88 @@
 import os
-from flask import Flask, render_template, request, session, redirect, url_for
-from datetime import datetime
+from flask import Flask, render_template, request, redirect, url_for
 from flask_sqlalchemy import SQLAlchemy
-from werkzeug.security import generate_password_hash, check_password_hash  
+from datetime import datetime
 
-DB_HOST = os.environ.get("DB_HOST", "db") #Defult to 'db' since Docker compose names it as such.
-DB_USER = os.environ.get("DB_USER", "python_todo_list_app") 
-DB_PASSWORD = os.environ.get("DB_PASSWORD", "123password")
-DB_NAME = os.environ.get("DB_NAME", "todo_list_app_db")
+# Initialize Flask application
+app = Flask(__name__)
 
-todo_list_app = Flask(__name__)
-todo_list_app.config['SQLALCHEMY_DATABASE_URI'] = f'mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}/{DB_NAME}'
-todo_list_app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-todo_list_app.secret_key = 'your_secret_key'  
+# Load database configuration from environment variables
+DB_HOST = os.environ.get("DB_HOST", "db")  # Default to 'db' since Docker Compose names it as such
+DB_USER = os.environ.get("DB_USER", "root")
+DB_PASSWORD = os.environ.get("DB_PASSWORD", "password")
+DB_NAME = os.environ.get("DB_NAME", "todo")
 
-db = SQLAlchemy(todo_list_app)
+# Configure SQLAlchemy connection to MySQL
+app.config['SQLALCHEMY_DATABASE_URI'] = f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}/{DB_NAME}"
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-class Taskes(db.Model):
-    task_id = db.Column(db.Integer, primary_key=True)
-    task = db.Column(db.String(255), nullable=False)
-    completed = db.Column(db.Boolean, nullable=False)
-    date_added = db.Column(db.DateTime, nullable=False)
-    user_name = db.Column(db.String(255), nullable=True)
+db = SQLAlchemy(app)
 
-class User(db.Model):
+
+# Define Task model
+class Task(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(255), unique=True, nullable=False)
-    password = db.Column(db.String(255), nullable=False)
+    description = db.Column(db.String(200), nullable=False)
+    deadline = db.Column(db.Date, nullable=True)
+    completed = db.Column(db.Boolean, default=False)
 
-with todo_list_app.app_context():
+    def days_until_deadline(self):
+        """Calculate the number of days until the deadline."""
+        if not self.deadline:
+            return float('inf')
+        return (self.deadline - datetime.now().date()).days
+
+    def status_color(self):
+        """Determine the color based on task completion and proximity to deadline."""
+        if self.completed:
+            return 'green'
+        if not self.deadline:
+            return 'orange'
+        days_left = self.days_until_deadline()
+        if days_left <= 1:
+            return 'red'
+        elif days_left <= 3:
+            return 'orange'
+        return 'white'
+
+# Create tables in the database if they don't exist
+with app.app_context():
     db.create_all()
 
-@todo_list_app.route('/login_register', methods=['GET', 'POST'])
-def login_register():
+@app.route('/', methods=['GET', 'POST'])
+def index():
     if request.method == 'POST':
-        action = request.form.get('action')
-        username = request.form.get('username')
-        password = request.form.get('password')
-        
-        if action == 'login':  
-            user = User.query.filter_by(username=username).first()
-            if user and check_password_hash(user.password, password):  
-                session['username'] = username
-                return redirect(url_for('main_page_todo_list__app'))
-            else:
-                return render_template('login_register.html', error="Invalid username or password.")
-        
-        elif action == 'register':  
-            if User.query.filter_by(username=username).first():
-                return render_template('login_register.html', error="Username already exists.")
-            
-            hashed_password = generate_password_hash(password, method='pbkdf2:sha256')  
-            new_user = User(username=username, password=hashed_password)
-            db.session.add(new_user)
+        if 'task' in request.form:
+            deadline = None
+            if 'deadline' in request.form and request.form['deadline']:
+                deadline = datetime.strptime(request.form['deadline'], '%Y-%m-%d').date()
+            new_task = Task(description=request.form['task'], deadline=deadline)
+            db.session.add(new_task)
             db.session.commit()
-            
-            return redirect(url_for('login_register'))
+
+        elif 'complete' in request.form:
+            task_id = request.form['complete']
+            task = Task.query.get(task_id)
+            if task:
+                task.completed = not task.completed
+                db.session.commit()
+
+        elif 'delete' in request.form:
+            task_id = request.form['delete']
+            task = Task.query.get(task_id)
+            if task:
+                db.session.delete(task)
+                db.session.commit()
+
+        return redirect(url_for('index'))
+
+    tasks = Task.query.all()
+    sorted_tasks = sorted(
+        tasks,
+        key=lambda x: (x.completed, x.deadline is None, x.deadline or datetime.max.date())
+    )
     
-    return render_template('login_register.html')
+    return render_template('index.html', tasks=sorted_tasks)
 
-@todo_list_app.route('/', methods=['GET', 'POST'])
-def main_page_todo_list__app():
-    if 'username' not in session:  
-        return redirect(url_for('login_register'))
-    
-    user = session['username']  
-    action = request.form.get('action')
-    task_description = request.form.get('task')
-    task_id = request.form.get('task_id')
-
-    if action == 'add' and task_description:
-        new_task = Taskes(
-            task=task_description,
-            completed=False,
-            date_added=datetime.now(),
-            user_name=user 
-        )
-        db.session.add(new_task)
-        db.session.commit()
-
-    elif action == 'del' and task_id:
-        task_to_delete = Taskes.query.get(int(task_id))
-        if task_to_delete:
-            db.session.delete(task_to_delete)
-            db.session.commit()
-
-    elif action == 'toggle' and task_id:
-        task_to_toggle = Taskes.query.get(task_id)
-        if task_to_toggle:
-            task_to_toggle.completed = not task_to_toggle.completed
-            db.session.commit()
-
-    query = request.form.get('search', '')
-    tasks = Taskes.query.filter(Taskes.user_name == user, Taskes.task.contains(query)).all()
-
-    for task in tasks:
-        task.date_added = task.date_added.strftime('%Y-%m-%d %H:%M')
-        
-    return render_template('main_page_todo_list.html', user=user, tasks=tasks, query=query)
-
-@todo_list_app.route('/by_netanel_bukris')
-def by_netanel_bukris():
-    return render_template('by_netanel_bukris.html')
-
-if __name__ == "__main__":
-    todo_list_app.run(debug=True)
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000)
