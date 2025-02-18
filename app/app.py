@@ -48,47 +48,40 @@ class Task(db.Model):
 with app.app_context():
     db.create_all()
 
-@app.route('/', methods=['GET'])
+@app.route('/', methods=['GET', 'POST'])
 def index():
-    """Display tasks sorted by completion status and deadline."""
+    if request.method == 'POST':
+        if 'task' in request.form:
+            deadline = None
+            if 'deadline' in request.form and request.form['deadline']:
+                deadline = datetime.strptime(request.form['deadline'], '%Y-%m-%d').date()
+            new_task = Task(description=request.form['task'], deadline=deadline)
+            db.session.add(new_task)
+            db.session.commit()
+
+        elif 'complete' in request.form:
+            task_id = request.form['complete']
+            task = Task.query.get(task_id)
+            if task:
+                task.completed = not task.completed
+                db.session.commit()
+
+        elif 'delete' in request.form:
+            task_id = request.form['delete']
+            task = Task.query.get(task_id)
+            if task:
+                db.session.delete(task)
+                db.session.commit()
+
+        return redirect(url_for('index'))
+
     tasks = Task.query.all()
     sorted_tasks = sorted(
         tasks,
         key=lambda x: (x.completed, x.deadline is None, x.deadline or datetime.max.date())
     )
+    
     return render_template('index.html', tasks=sorted_tasks)
-
-@app.route('/add_task', methods=['POST'])
-def add_task():
-    """Add a new task."""
-    if 'task' in request.form:
-        deadline = None
-        if 'deadline' in request.form and request.form['deadline']:
-            deadline = datetime.strptime(request.form['deadline'], '%Y-%m-%d').date()
-        new_task = Task(description=request.form['task'], deadline=deadline)
-        db.session.add(new_task)
-        db.session.commit()
-    return redirect(url_for('index'))
-
-@app.route('/complete_task', methods=['POST'])
-def complete_task():
-    """Mark a task as completed or incomplete."""
-    task_id = request.form.get('complete')
-    task = Task.query.get(task_id)
-    if task:
-        task.completed = not task.completed
-        db.session.commit()
-    return redirect(url_for('index'))
-
-@app.route('/delete_task', methods=['POST'])
-def delete_task():
-    """Delete a task."""
-    task_id = request.form.get('delete')
-    task = Task.query.get(task_id)
-    if task:
-        db.session.delete(task)
-        db.session.commit()
-    return redirect(url_for('index'))
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
