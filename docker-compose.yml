@@ -1,33 +1,28 @@
-
 services:
-  app_1:
-    image: asafd/to_do_list
-    environment:
-      FLASK_APP: app.py
-      FLASK_ENV: production
-      DB_HOST: db
-      DB_USER: python_todo_list_app
-      DB_PASSWORD: 123password
-      DB_NAME: todo_list_app_db
+  myapp1:
     depends_on:
       db:
         condition: service_healthy
+    image: myapp
+    environment:
+      DB_HOST: db
+      DB_NAME: todo
+      DB_USER: myuser
+      DB_PASSWORD: pass
     networks:
     - front
     - back
 
-  app_2:
-    image: asafd/to_do_list
-    environment:
-      FLASK_APP: app.py
-      FLASK_ENV: production
-      DB_HOST: db
-      DB_USER: python_todo_list_app
-      DB_PASSWORD: 123password
-      DB_NAME: todo_list_app_db
+  myapp2:
     depends_on:
       db:
         condition: service_healthy
+    image: myapp
+    environment:
+      DB_HOST: db
+      DB_NAME: todo
+      DB_USER: myuser
+      DB_PASSWORD: pass
     networks:
     - front
     - back
@@ -35,34 +30,35 @@ services:
   db:
     image: mysql:8.0
     environment:
-      MYSQL_ROOT_PASSWORD: rootpassword
-      MYSQL_DATABASE: todo_list_app_db
-      MYSQL_USER: python_todo_list_app
-      MYSQL_PASSWORD: 123password
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_DATABASE: todo
+      MYSQL_USER: myuser
+      MYSQL_PASSWORD: pass
     volumes:
     -  sql_data:/var/lib/mysql
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
       interval: 10s
-      retries: 5
       timeout: 5s
+      retries: 5
     networks:
     - back
 
   nginx:
     image: nginx:latest
     ports:
-    -  "80:80"
+    - 80:80
     volumes:
-    -  ./nginx/default.conf:/etc/nginx/templates/default.conf.template
+    - ./nginx/default.conf:/etc/nginx/templates/default.conf.template
     depends_on:
-    -  app_1
-    -  app_2
+    - myapp1
+    - myapp2
     environment:
-      APP_1_HOST: app_1
-      APP_2_HOST: app_2
+      APP_1_HOST: myapp1
+      APP_2_HOST: myapp2
     networks:
     - front
+
 
 volumes:
   sql_data:
